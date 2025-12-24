@@ -1,0 +1,382 @@
+{
+ "Description": "EVM Pipeline - Storage resources (S3, DynamoDB, SSM)",
+ "Resources": {
+  "AbiBucketB2EAE2C5": {
+   "Type": "AWS::S3::Bucket",
+   "Properties": {
+    "BucketEncryption": {
+     "ServerSideEncryptionConfiguration": [
+      {
+       "ServerSideEncryptionByDefault": {
+        "SSEAlgorithm": "AES256"
+       }
+      }
+     ]
+    },
+    "BucketName": "evm-pipeline-abis-000000000000",
+    "PublicAccessBlockConfiguration": {
+     "BlockPublicAcls": true,
+     "BlockPublicPolicy": true,
+     "IgnorePublicAcls": true,
+     "RestrictPublicBuckets": true
+    },
+    "Tags": [
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Project",
+      "Value": "evm-pipeline"
+     }
+    ],
+    "VersioningConfiguration": {
+     "Status": "Enabled"
+    }
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "EvmPipelineStorage/AbiBucket/Resource"
+   }
+  },
+  "RawDataBucket57F26C03": {
+   "Type": "AWS::S3::Bucket",
+   "Properties": {
+    "BucketEncryption": {
+     "ServerSideEncryptionConfiguration": [
+      {
+       "ServerSideEncryptionByDefault": {
+        "SSEAlgorithm": "AES256"
+       }
+      }
+     ]
+    },
+    "BucketName": "evm-pipeline-raw-data-000000000000",
+    "LifecycleConfiguration": {
+     "Rules": [
+      {
+       "Id": "IntelligentTiering",
+       "Status": "Enabled",
+       "Transitions": [
+        {
+         "StorageClass": "INTELLIGENT_TIERING",
+         "TransitionInDays": 30
+        }
+       ]
+      }
+     ]
+    },
+    "PublicAccessBlockConfiguration": {
+     "BlockPublicAcls": true,
+     "BlockPublicPolicy": true,
+     "IgnorePublicAcls": true,
+     "RestrictPublicBuckets": true
+    },
+    "Tags": [
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Project",
+      "Value": "evm-pipeline"
+     }
+    ]
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "EvmPipelineStorage/RawDataBucket/Resource"
+   }
+  },
+  "DecodedDataBucketBEE63E2F": {
+   "Type": "AWS::S3::Bucket",
+   "Properties": {
+    "BucketEncryption": {
+     "ServerSideEncryptionConfiguration": [
+      {
+       "ServerSideEncryptionByDefault": {
+        "SSEAlgorithm": "AES256"
+       }
+      }
+     ]
+    },
+    "BucketName": "evm-pipeline-decoded-data-000000000000",
+    "LifecycleConfiguration": {
+     "Rules": [
+      {
+       "Id": "IntelligentTiering",
+       "Status": "Enabled",
+       "Transitions": [
+        {
+         "StorageClass": "INTELLIGENT_TIERING",
+         "TransitionInDays": 30
+        }
+       ]
+      }
+     ]
+    },
+    "PublicAccessBlockConfiguration": {
+     "BlockPublicAcls": true,
+     "BlockPublicPolicy": true,
+     "IgnorePublicAcls": true,
+     "RestrictPublicBuckets": true
+    },
+    "Tags": [
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Project",
+      "Value": "evm-pipeline"
+     }
+    ]
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "EvmPipelineStorage/DecodedDataBucket/Resource"
+   }
+  },
+  "ContractsTable778EA487": {
+   "Type": "AWS::DynamoDB::Table",
+   "Properties": {
+    "AttributeDefinitions": [
+     {
+      "AttributeName": "chainid",
+      "AttributeType": "N"
+     },
+     {
+      "AttributeName": "contract_address",
+      "AttributeType": "S"
+     },
+     {
+      "AttributeName": "chain_name",
+      "AttributeType": "S"
+     }
+    ],
+    "BillingMode": "PAY_PER_REQUEST",
+    "GlobalSecondaryIndexes": [
+     {
+      "IndexName": "chain-name-index",
+      "KeySchema": [
+       {
+        "AttributeName": "chain_name",
+        "KeyType": "HASH"
+       }
+      ],
+      "Projection": {
+       "ProjectionType": "ALL"
+      }
+     }
+    ],
+    "KeySchema": [
+     {
+      "AttributeName": "chainid",
+      "KeyType": "HASH"
+     },
+     {
+      "AttributeName": "contract_address",
+      "KeyType": "RANGE"
+     }
+    ],
+    "PointInTimeRecoverySpecification": {
+     "PointInTimeRecoveryEnabled": true
+    },
+    "TableName": "evm-pipeline-contracts",
+    "Tags": [
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Project",
+      "Value": "evm-pipeline"
+     }
+    ]
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "EvmPipelineStorage/ContractsTable/Resource"
+   }
+  },
+  "EtherscanApiKeyParamFFA92C6E": {
+   "Type": "AWS::SSM::Parameter",
+   "Properties": {
+    "Description": "Etherscan API key for fetching blockchain data",
+    "Name": "/evm-pipeline/etherscan-api-key",
+    "Tags": {
+     "ManagedBy": "CDK",
+     "Project": "evm-pipeline"
+    },
+    "Type": "String",
+    "Value": "placeholder-replace-with-actual-key"
+   },
+   "Metadata": {
+    "aws:cdk:path": "EvmPipelineStorage/EtherscanApiKeyParam/Resource"
+   }
+  },
+  "CDKMetadata": {
+   "Type": "AWS::CDK::Metadata",
+   "Properties": {
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/z1M3QrCIBh9lt3rV0wIuq0HaKzu45tamVPDH2KI755u0NX5Pz30jMG+w2+gXGg6qwnyNSLXpFr3HBjkU+JaRnJ+2I0VIhaLxolaveE0yxatpJAQTNt7ZZ8DejQySt/ivyiFjDK45Pk6u6T4SfVxWOLL2R2DIxy6d1CK+mSjMhLGDX/YNINtqQAAAA=="
+   },
+   "Metadata": {
+    "aws:cdk:path": "EvmPipelineStorage/CDKMetadata/Default"
+   }
+  }
+ },
+ "Outputs": {
+  "AbiBucketName": {
+   "Description": "S3 bucket for contract ABIs",
+   "Value": {
+    "Ref": "AbiBucketB2EAE2C5"
+   }
+  },
+  "RawDataBucketName": {
+   "Description": "S3 bucket for raw DeltaLake data",
+   "Value": {
+    "Ref": "RawDataBucket57F26C03"
+   }
+  },
+  "DecodedDataBucketName": {
+   "Description": "S3 bucket for decoded DeltaLake data",
+   "Value": {
+    "Ref": "DecodedDataBucketBEE63E2F"
+   }
+  },
+  "ContractsTableName": {
+   "Description": "DynamoDB table for contract registry",
+   "Value": {
+    "Ref": "ContractsTable778EA487"
+   }
+  },
+  "EtherscanApiKeyParamName": {
+   "Description": "SSM parameter name for Etherscan API key",
+   "Value": {
+    "Ref": "EtherscanApiKeyParamFFA92C6E"
+   }
+  },
+  "ExportsOutputFnGetAttContractsTable778EA487Arn35551BCD": {
+   "Value": {
+    "Fn::GetAtt": [
+     "ContractsTable778EA487",
+     "Arn"
+    ]
+   },
+   "Export": {
+    "Name": "EvmPipelineStorage:ExportsOutputFnGetAttContractsTable778EA487Arn35551BCD"
+   }
+  },
+  "ExportsOutputRefEtherscanApiKeyParamFFA92C6E6E676F78": {
+   "Value": {
+    "Ref": "EtherscanApiKeyParamFFA92C6E"
+   },
+   "Export": {
+    "Name": "EvmPipelineStorage:ExportsOutputRefEtherscanApiKeyParamFFA92C6E6E676F78"
+   }
+  },
+  "ExportsOutputRefContractsTable778EA487A860DA49": {
+   "Value": {
+    "Ref": "ContractsTable778EA487"
+   },
+   "Export": {
+    "Name": "EvmPipelineStorage:ExportsOutputRefContractsTable778EA487A860DA49"
+   }
+  },
+  "ExportsOutputFnGetAttAbiBucketB2EAE2C5Arn9C76EFCE": {
+   "Value": {
+    "Fn::GetAtt": [
+     "AbiBucketB2EAE2C5",
+     "Arn"
+    ]
+   },
+   "Export": {
+    "Name": "EvmPipelineStorage:ExportsOutputFnGetAttAbiBucketB2EAE2C5Arn9C76EFCE"
+   }
+  },
+  "ExportsOutputFnGetAttRawDataBucket57F26C03Arn307EA583": {
+   "Value": {
+    "Fn::GetAtt": [
+     "RawDataBucket57F26C03",
+     "Arn"
+    ]
+   },
+   "Export": {
+    "Name": "EvmPipelineStorage:ExportsOutputFnGetAttRawDataBucket57F26C03Arn307EA583"
+   }
+  },
+  "ExportsOutputRefRawDataBucket57F26C0354920F72": {
+   "Value": {
+    "Ref": "RawDataBucket57F26C03"
+   },
+   "Export": {
+    "Name": "EvmPipelineStorage:ExportsOutputRefRawDataBucket57F26C0354920F72"
+   }
+  },
+  "ExportsOutputRefAbiBucketB2EAE2C5CBF3ACAC": {
+   "Value": {
+    "Ref": "AbiBucketB2EAE2C5"
+   },
+   "Export": {
+    "Name": "EvmPipelineStorage:ExportsOutputRefAbiBucketB2EAE2C5CBF3ACAC"
+   }
+  },
+  "ExportsOutputFnGetAttDecodedDataBucketBEE63E2FArn22E93AAF": {
+   "Value": {
+    "Fn::GetAtt": [
+     "DecodedDataBucketBEE63E2F",
+     "Arn"
+    ]
+   },
+   "Export": {
+    "Name": "EvmPipelineStorage:ExportsOutputFnGetAttDecodedDataBucketBEE63E2FArn22E93AAF"
+   }
+  },
+  "ExportsOutputRefDecodedDataBucketBEE63E2FE5849F3A": {
+   "Value": {
+    "Ref": "DecodedDataBucketBEE63E2F"
+   },
+   "Export": {
+    "Name": "EvmPipelineStorage:ExportsOutputRefDecodedDataBucketBEE63E2FE5849F3A"
+   }
+  }
+ },
+ "Parameters": {
+  "BootstrapVersion": {
+   "Type": "AWS::SSM::Parameter::Value<String>",
+   "Default": "/cdk-bootstrap/hnb659fds/version",
+   "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]"
+  }
+ },
+ "Rules": {
+  "CheckBootstrapVersion": {
+   "Assertions": [
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Contains": [
+         [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+         ],
+         {
+          "Ref": "BootstrapVersion"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI."
+    }
+   ]
+  }
+ }
+}

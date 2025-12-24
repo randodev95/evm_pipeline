@@ -1,0 +1,354 @@
+{
+ "Description": "EVM Pipeline - Step Functions and EventBridge",
+ "Resources": {
+  "EvmPipelineStateMachineRoleFC74B660": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "states.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "Tags": [
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Project",
+      "Value": "evm-pipeline"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "EvmPipelineOrchestration/EvmPipelineStateMachine/Role/Resource"
+   }
+  },
+  "EvmPipelineStateMachineRoleDefaultPolicy919B42D6": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": "lambda:InvokeFunction",
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::ImportValue": "EvmPipelineLambda:ExportsOutputFnGetAttFetchLatestBlockFn0EDA8928Arn653320A5"
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::ImportValue": "EvmPipelineLambda:ExportsOutputFnGetAttFetchLatestBlockFn0EDA8928Arn653320A5"
+           },
+           ":*"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "Action": "lambda:InvokeFunction",
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::ImportValue": "EvmPipelineLambda:ExportsOutputFnGetAttDecodeDataFnBAF65CC4Arn3E76EC9F"
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::ImportValue": "EvmPipelineLambda:ExportsOutputFnGetAttDecodeDataFnBAF65CC4Arn3E76EC9F"
+           },
+           ":*"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "Action": "lambda:InvokeFunction",
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::ImportValue": "EvmPipelineLambda:ExportsOutputFnGetAttSyncRawDataFnB9930B66Arn9B2ECEBA"
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::ImportValue": "EvmPipelineLambda:ExportsOutputFnGetAttSyncRawDataFnB9930B66Arn9B2ECEBA"
+           },
+           ":*"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "Action": [
+        "xray:PutTraceSegments",
+        "xray:PutTelemetryRecords",
+        "xray:GetSamplingRules",
+        "xray:GetSamplingTargets"
+       ],
+       "Effect": "Allow",
+       "Resource": "*"
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "EvmPipelineStateMachineRoleDefaultPolicy919B42D6",
+    "Roles": [
+     {
+      "Ref": "EvmPipelineStateMachineRoleFC74B660"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "EvmPipelineOrchestration/EvmPipelineStateMachine/Role/DefaultPolicy/Resource"
+   }
+  },
+  "EvmPipelineStateMachine54CCB097": {
+   "Type": "AWS::StepFunctions::StateMachine",
+   "Properties": {
+    "DefinitionString": {
+     "Fn::Join": [
+      "",
+      [
+       "{\"StartAt\":\"FetchLatestBlock\",\"States\":{\"FetchLatestBlock\":{\"Next\":\"CheckContracts\",\"Retry\":[{\"ErrorEquals\":[\"Lambda.ClientExecutionTimeoutException\",\"Lambda.ServiceException\",\"Lambda.AWSLambdaException\",\"Lambda.SdkClientException\"],\"IntervalSeconds\":2,\"MaxAttempts\":6,\"BackoffRate\":2},{\"ErrorEquals\":[\"States.TaskFailed\",\"Lambda.ServiceException\"],\"IntervalSeconds\":10,\"MaxAttempts\":3,\"BackoffRate\":2}],\"Catch\":[{\"ErrorEquals\":[\"States.ALL\"],\"Next\":\"FetchBlockFailed\"}],\"Type\":\"Task\",\"Comment\":\"Fetch latest block for each chain with reorg buffer\",\"OutputPath\":\"$.Payload\",\"Resource\":\"arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":states:::lambda:invoke\",\"Parameters\":{\"FunctionName\":\"",
+       {
+        "Fn::ImportValue": "EvmPipelineLambda:ExportsOutputFnGetAttFetchLatestBlockFn0EDA8928Arn653320A5"
+       },
+       "\",\"Payload.$\":\"$\"}},\"CheckContracts\":{\"Type\":\"Choice\",\"Choices\":[{\"Or\":[{\"Not\":{\"Variable\":\"$.contracts\",\"IsPresent\":true}},{\"Variable\":\"$.contracts[0]\",\"NumericEquals\":0}],\"Next\":\"NoContractsFound\"}],\"Default\":\"SyncContractsMap\"},\"SyncContractsMap\":{\"Type\":\"Map\",\"Comment\":\"Process each contract in parallel (max 5 concurrent)\",\"Next\":\"DecodeContractsMap\",\"ItemsPath\":\"$.contracts\",\"ItemProcessor\":{\"ProcessorConfig\":{\"Mode\":\"INLINE\"},\"StartAt\":\"SyncRawData\",\"States\":{\"SyncRawData\":{\"End\":true,\"Retry\":[{\"ErrorEquals\":[\"Lambda.ClientExecutionTimeoutException\",\"Lambda.ServiceException\",\"Lambda.AWSLambdaException\",\"Lambda.SdkClientException\"],\"IntervalSeconds\":2,\"MaxAttempts\":6,\"BackoffRate\":2},{\"ErrorEquals\":[\"States.TaskFailed\",\"Lambda.ServiceException\"],\"IntervalSeconds\":30,\"MaxAttempts\":3,\"BackoffRate\":2}],\"Type\":\"Task\",\"Comment\":\"Sync raw event logs from Etherscan to DeltaLake\",\"OutputPath\":\"$.Payload\",\"Resource\":\"arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":states:::lambda:invoke\",\"Parameters\":{\"FunctionName\":\"",
+       {
+        "Fn::ImportValue": "EvmPipelineLambda:ExportsOutputFnGetAttSyncRawDataFnB9930B66Arn9B2ECEBA"
+       },
+       "\",\"Payload.$\":\"$\"}}}},\"MaxConcurrency\":5},\"DecodeContractsMap\":{\"Type\":\"Map\",\"Comment\":\"Decode each contract's logs in parallel (max 5 concurrent)\",\"Next\":\"PipelineSuccess\",\"ItemsPath\":\"$\",\"ItemProcessor\":{\"ProcessorConfig\":{\"Mode\":\"INLINE\"},\"StartAt\":\"DecodeData\",\"States\":{\"DecodeData\":{\"End\":true,\"Retry\":[{\"ErrorEquals\":[\"Lambda.ClientExecutionTimeoutException\",\"Lambda.ServiceException\",\"Lambda.AWSLambdaException\",\"Lambda.SdkClientException\"],\"IntervalSeconds\":2,\"MaxAttempts\":6,\"BackoffRate\":2},{\"ErrorEquals\":[\"States.TaskFailed\",\"Lambda.ServiceException\"],\"IntervalSeconds\":30,\"MaxAttempts\":3,\"BackoffRate\":2}],\"Type\":\"Task\",\"Comment\":\"Decode raw event logs using contract ABIs\",\"OutputPath\":\"$.Payload\",\"Resource\":\"arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":states:::lambda:invoke\",\"Parameters\":{\"FunctionName\":\"",
+       {
+        "Fn::ImportValue": "EvmPipelineLambda:ExportsOutputFnGetAttDecodeDataFnBAF65CC4Arn3E76EC9F"
+       },
+       "\",\"Payload.$\":\"$\"}}}},\"MaxConcurrency\":5},\"PipelineSuccess\":{\"Type\":\"Succeed\",\"Comment\":\"EVM Pipeline sync completed successfully\"},\"NoContractsFound\":{\"Type\":\"Succeed\",\"Comment\":\"No contracts registered to process\"},\"FetchBlockFailed\":{\"Type\":\"Fail\",\"Error\":\"FetchBlockError\",\"Cause\":\"Failed to fetch latest block after retries\"}},\"TimeoutSeconds\":3600,\"Comment\":\"EVM Pipeline data synchronization state machine\"}"
+      ]
+     ]
+    },
+    "RoleArn": {
+     "Fn::GetAtt": [
+      "EvmPipelineStateMachineRoleFC74B660",
+      "Arn"
+     ]
+    },
+    "StateMachineName": "evm-pipeline-sync",
+    "Tags": [
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Project",
+      "Value": "evm-pipeline"
+     }
+    ],
+    "TracingConfiguration": {
+     "Enabled": true
+    }
+   },
+   "DependsOn": [
+    "EvmPipelineStateMachineRoleDefaultPolicy919B42D6",
+    "EvmPipelineStateMachineRoleFC74B660"
+   ],
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "EvmPipelineOrchestration/EvmPipelineStateMachine/Resource"
+   }
+  },
+  "EvmPipelineStateMachineEventsRoleFF53267F": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "events.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "Tags": [
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Project",
+      "Value": "evm-pipeline"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "EvmPipelineOrchestration/EvmPipelineStateMachine/EventsRole/Resource"
+   }
+  },
+  "EvmPipelineStateMachineEventsRoleDefaultPolicyE5ACC634": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": "states:StartExecution",
+       "Effect": "Allow",
+       "Resource": {
+        "Ref": "EvmPipelineStateMachine54CCB097"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "EvmPipelineStateMachineEventsRoleDefaultPolicyE5ACC634",
+    "Roles": [
+     {
+      "Ref": "EvmPipelineStateMachineEventsRoleFF53267F"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "EvmPipelineOrchestration/EvmPipelineStateMachine/EventsRole/DefaultPolicy/Resource"
+   }
+  },
+  "ScheduleRuleDA5BD877": {
+   "Type": "AWS::Events::Rule",
+   "Properties": {
+    "Description": "Triggers EVM Pipeline sync every 30 minutes",
+    "Name": "evm-pipeline-schedule",
+    "ScheduleExpression": "rate(30 minutes)",
+    "State": "ENABLED",
+    "Tags": [
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Project",
+      "Value": "evm-pipeline"
+     }
+    ],
+    "Targets": [
+     {
+      "Arn": {
+       "Ref": "EvmPipelineStateMachine54CCB097"
+      },
+      "Id": "Target0",
+      "InputTransformer": {
+       "InputPathsMap": {
+        "time": "$.time"
+       },
+       "InputTemplate": "{\"triggered_at\":<time>,\"source\":\"scheduled\"}"
+      },
+      "RoleArn": {
+       "Fn::GetAtt": [
+        "EvmPipelineStateMachineEventsRoleFF53267F",
+        "Arn"
+       ]
+      }
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "EvmPipelineOrchestration/ScheduleRule/Resource"
+   }
+  },
+  "CDKMetadata": {
+   "Type": "AWS::CDK::Metadata",
+   "Properties": {
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/1WNwQrCQAxEv8V7GsWC4FkQBEWpHyAxjTS23S1uVpGy/26tHvT0ZibDZI7zPMfZhB4h47LOGj1jfzTiGobo1AeT7hIdm3oXTkahDril9lzSxt19LfBXwH5N2sCq8soCx8gsUsKOOhgmTXbElTqB1cX9+gRKLfaFb8bTyINvlJ9v+1EJ5C7Ohg9F/NYGpgSFBB9vPEb7aF20BIenVd5Nc1ziYnINqtktOtNWsPjwBS5a5Q/2AAAA"
+   },
+   "Metadata": {
+    "aws:cdk:path": "EvmPipelineOrchestration/CDKMetadata/Default"
+   }
+  }
+ },
+ "Outputs": {
+  "StateMachineArn": {
+   "Description": "ARN of the EVM Pipeline State Machine",
+   "Value": {
+    "Ref": "EvmPipelineStateMachine54CCB097"
+   }
+  },
+  "StateMachineName": {
+   "Description": "Name of the EVM Pipeline State Machine",
+   "Value": {
+    "Fn::GetAtt": [
+     "EvmPipelineStateMachine54CCB097",
+     "Name"
+    ]
+   }
+  },
+  "ScheduleRuleName": {
+   "Description": "Name of the EventBridge schedule rule",
+   "Value": {
+    "Ref": "ScheduleRuleDA5BD877"
+   }
+  }
+ },
+ "Parameters": {
+  "BootstrapVersion": {
+   "Type": "AWS::SSM::Parameter::Value<String>",
+   "Default": "/cdk-bootstrap/hnb659fds/version",
+   "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]"
+  }
+ },
+ "Rules": {
+  "CheckBootstrapVersion": {
+   "Assertions": [
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Contains": [
+         [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+         ],
+         {
+          "Ref": "BootstrapVersion"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI."
+    }
+   ]
+  }
+ }
+}

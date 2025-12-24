@@ -1,0 +1,806 @@
+{
+ "Description": "EVM Pipeline - Lambda functions",
+ "Resources": {
+  "FetchLatestBlockFnServiceRole55BAC488": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+       ]
+      ]
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Project",
+      "Value": "evm-pipeline"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "EvmPipelineLambda/FetchLatestBlockFn/ServiceRole/Resource"
+   }
+  },
+  "FetchLatestBlockFnServiceRoleDefaultPolicy624EE8D0": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "dynamodb:BatchGetItem",
+        "dynamodb:Query",
+        "dynamodb:GetItem",
+        "dynamodb:Scan",
+        "dynamodb:ConditionCheckItem",
+        "dynamodb:DescribeTable"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::ImportValue": "EvmPipelineStorage:ExportsOutputFnGetAttContractsTable778EA487Arn35551BCD"
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::ImportValue": "EvmPipelineStorage:ExportsOutputFnGetAttContractsTable778EA487Arn35551BCD"
+           },
+           "/index/*"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "Action": [
+        "dynamodb:GetRecords",
+        "dynamodb:GetShardIterator"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::ImportValue": "EvmPipelineStorage:ExportsOutputFnGetAttContractsTable778EA487Arn35551BCD"
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::ImportValue": "EvmPipelineStorage:ExportsOutputFnGetAttContractsTable778EA487Arn35551BCD"
+           },
+           "/index/*"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "Action": [
+        "ssm:DescribeParameters",
+        "ssm:GetParameters",
+        "ssm:GetParameter",
+        "ssm:GetParameterHistory"
+       ],
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::Join": [
+         "",
+         [
+          "arn:aws:ssm:us-east-1:000000000000:parameter",
+          {
+           "Fn::ImportValue": "EvmPipelineStorage:ExportsOutputRefEtherscanApiKeyParamFFA92C6E6E676F78"
+          }
+         ]
+        ]
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "FetchLatestBlockFnServiceRoleDefaultPolicy624EE8D0",
+    "Roles": [
+     {
+      "Ref": "FetchLatestBlockFnServiceRole55BAC488"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "EvmPipelineLambda/FetchLatestBlockFn/ServiceRole/DefaultPolicy/Resource"
+   }
+  },
+  "FetchLatestBlockFn0EDA8928": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Architectures": [
+     "x86_64"
+    ],
+    "Code": {
+     "ImageUri": {
+      "Fn::Sub": "000000000000.dkr.ecr.us-east-1.${AWS::URLSuffix}/cdk-hnb659fds-container-assets-000000000000-us-east-1:aa8230aa6b325c3cdeab9b6df364edd67b266ceec740d2321998e350ea5e3edc"
+     }
+    },
+    "Description": "Fetches latest block for each chain with reorg buffer",
+    "Environment": {
+     "Variables": {
+      "DYNAMODB_TABLE": {
+       "Fn::ImportValue": "EvmPipelineStorage:ExportsOutputRefContractsTable778EA487A860DA49"
+      },
+      "SSM_API_KEY_PARAM": {
+       "Fn::ImportValue": "EvmPipelineStorage:ExportsOutputRefEtherscanApiKeyParamFFA92C6E6E676F78"
+      },
+      "REORG_BUFFER_BLOCKS": "50"
+     }
+    },
+    "FunctionName": "evm-pipeline-fetch-latest-block",
+    "MemorySize": 512,
+    "PackageType": "Image",
+    "Role": {
+     "Fn::GetAtt": [
+      "FetchLatestBlockFnServiceRole55BAC488",
+      "Arn"
+     ]
+    },
+    "Tags": [
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Project",
+      "Value": "evm-pipeline"
+     }
+    ],
+    "Timeout": 60
+   },
+   "DependsOn": [
+    "FetchLatestBlockFnServiceRoleDefaultPolicy624EE8D0",
+    "FetchLatestBlockFnServiceRole55BAC488"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "EvmPipelineLambda/FetchLatestBlockFn/Resource",
+    "aws:asset:path": "asset.aa8230aa6b325c3cdeab9b6df364edd67b266ceec740d2321998e350ea5e3edc",
+    "aws:asset:dockerfile-path": "fetch_latest_block/Dockerfile",
+    "aws:asset:property": "Code.ImageUri"
+   }
+  },
+  "SyncRawDataFnServiceRole3A391DBB": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+       ]
+      ]
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Project",
+      "Value": "evm-pipeline"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "EvmPipelineLambda/SyncRawDataFn/ServiceRole/Resource"
+   }
+  },
+  "SyncRawDataFnServiceRoleDefaultPolicy41D4A28B": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "dynamodb:BatchGetItem",
+        "dynamodb:Query",
+        "dynamodb:GetItem",
+        "dynamodb:Scan",
+        "dynamodb:ConditionCheckItem",
+        "dynamodb:BatchWriteItem",
+        "dynamodb:PutItem",
+        "dynamodb:UpdateItem",
+        "dynamodb:DeleteItem",
+        "dynamodb:DescribeTable"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::ImportValue": "EvmPipelineStorage:ExportsOutputFnGetAttContractsTable778EA487Arn35551BCD"
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::ImportValue": "EvmPipelineStorage:ExportsOutputFnGetAttContractsTable778EA487Arn35551BCD"
+           },
+           "/index/*"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "Action": [
+        "dynamodb:GetRecords",
+        "dynamodb:GetShardIterator"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::ImportValue": "EvmPipelineStorage:ExportsOutputFnGetAttContractsTable778EA487Arn35551BCD"
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::ImportValue": "EvmPipelineStorage:ExportsOutputFnGetAttContractsTable778EA487Arn35551BCD"
+           },
+           "/index/*"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "Action": [
+        "ssm:DescribeParameters",
+        "ssm:GetParameters",
+        "ssm:GetParameter",
+        "ssm:GetParameterHistory"
+       ],
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::Join": [
+         "",
+         [
+          "arn:aws:ssm:us-east-1:000000000000:parameter",
+          {
+           "Fn::ImportValue": "EvmPipelineStorage:ExportsOutputRefEtherscanApiKeyParamFFA92C6E6E676F78"
+          }
+         ]
+        ]
+       }
+      },
+      {
+       "Action": [
+        "s3:GetObject*",
+        "s3:GetBucket*",
+        "s3:List*"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::ImportValue": "EvmPipelineStorage:ExportsOutputFnGetAttAbiBucketB2EAE2C5Arn9C76EFCE"
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::ImportValue": "EvmPipelineStorage:ExportsOutputFnGetAttAbiBucketB2EAE2C5Arn9C76EFCE"
+           },
+           "/*"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "Action": [
+        "s3:GetObject*",
+        "s3:GetBucket*",
+        "s3:List*",
+        "s3:DeleteObject*",
+        "s3:PutObject",
+        "s3:PutObjectLegalHold",
+        "s3:PutObjectRetention",
+        "s3:PutObjectTagging",
+        "s3:PutObjectVersionTagging",
+        "s3:Abort*"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::ImportValue": "EvmPipelineStorage:ExportsOutputFnGetAttRawDataBucket57F26C03Arn307EA583"
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::ImportValue": "EvmPipelineStorage:ExportsOutputFnGetAttRawDataBucket57F26C03Arn307EA583"
+           },
+           "/*"
+          ]
+         ]
+        }
+       ]
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "SyncRawDataFnServiceRoleDefaultPolicy41D4A28B",
+    "Roles": [
+     {
+      "Ref": "SyncRawDataFnServiceRole3A391DBB"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "EvmPipelineLambda/SyncRawDataFn/ServiceRole/DefaultPolicy/Resource"
+   }
+  },
+  "SyncRawDataFnB9930B66": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Architectures": [
+     "x86_64"
+    ],
+    "Code": {
+     "ImageUri": {
+      "Fn::Sub": "000000000000.dkr.ecr.us-east-1.${AWS::URLSuffix}/cdk-hnb659fds-container-assets-000000000000-us-east-1:8832709ccaeb978fed7434d1c11fd968342b45f5ed379ce69d3452032f4a0b94"
+     }
+    },
+    "Description": "Syncs raw event logs from Etherscan to DeltaLake",
+    "Environment": {
+     "Variables": {
+      "DYNAMODB_TABLE": {
+       "Fn::ImportValue": "EvmPipelineStorage:ExportsOutputRefContractsTable778EA487A860DA49"
+      },
+      "SSM_API_KEY_PARAM": {
+       "Fn::ImportValue": "EvmPipelineStorage:ExportsOutputRefEtherscanApiKeyParamFFA92C6E6E676F78"
+      },
+      "RAW_DATA_BUCKET": {
+       "Fn::ImportValue": "EvmPipelineStorage:ExportsOutputRefRawDataBucket57F26C0354920F72"
+      },
+      "ABI_BUCKET": {
+       "Fn::ImportValue": "EvmPipelineStorage:ExportsOutputRefAbiBucketB2EAE2C5CBF3ACAC"
+      }
+     }
+    },
+    "FunctionName": "evm-pipeline-sync-raw-data",
+    "MemorySize": 1024,
+    "PackageType": "Image",
+    "Role": {
+     "Fn::GetAtt": [
+      "SyncRawDataFnServiceRole3A391DBB",
+      "Arn"
+     ]
+    },
+    "Tags": [
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Project",
+      "Value": "evm-pipeline"
+     }
+    ],
+    "Timeout": 600
+   },
+   "DependsOn": [
+    "SyncRawDataFnServiceRoleDefaultPolicy41D4A28B",
+    "SyncRawDataFnServiceRole3A391DBB"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "EvmPipelineLambda/SyncRawDataFn/Resource",
+    "aws:asset:path": "asset.8832709ccaeb978fed7434d1c11fd968342b45f5ed379ce69d3452032f4a0b94",
+    "aws:asset:dockerfile-path": "sync_raw_data/Dockerfile",
+    "aws:asset:property": "Code.ImageUri"
+   }
+  },
+  "DecodeDataFnServiceRole99E9A8AF": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+       ]
+      ]
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Project",
+      "Value": "evm-pipeline"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "EvmPipelineLambda/DecodeDataFn/ServiceRole/Resource"
+   }
+  },
+  "DecodeDataFnServiceRoleDefaultPolicy3A4578CB": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "dynamodb:BatchGetItem",
+        "dynamodb:Query",
+        "dynamodb:GetItem",
+        "dynamodb:Scan",
+        "dynamodb:ConditionCheckItem",
+        "dynamodb:BatchWriteItem",
+        "dynamodb:PutItem",
+        "dynamodb:UpdateItem",
+        "dynamodb:DeleteItem",
+        "dynamodb:DescribeTable"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::ImportValue": "EvmPipelineStorage:ExportsOutputFnGetAttContractsTable778EA487Arn35551BCD"
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::ImportValue": "EvmPipelineStorage:ExportsOutputFnGetAttContractsTable778EA487Arn35551BCD"
+           },
+           "/index/*"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "Action": [
+        "dynamodb:GetRecords",
+        "dynamodb:GetShardIterator"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::ImportValue": "EvmPipelineStorage:ExportsOutputFnGetAttContractsTable778EA487Arn35551BCD"
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::ImportValue": "EvmPipelineStorage:ExportsOutputFnGetAttContractsTable778EA487Arn35551BCD"
+           },
+           "/index/*"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "Action": [
+        "s3:GetObject*",
+        "s3:GetBucket*",
+        "s3:List*"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::ImportValue": "EvmPipelineStorage:ExportsOutputFnGetAttAbiBucketB2EAE2C5Arn9C76EFCE"
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::ImportValue": "EvmPipelineStorage:ExportsOutputFnGetAttAbiBucketB2EAE2C5Arn9C76EFCE"
+           },
+           "/*"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "Action": [
+        "s3:GetObject*",
+        "s3:GetBucket*",
+        "s3:List*"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::ImportValue": "EvmPipelineStorage:ExportsOutputFnGetAttRawDataBucket57F26C03Arn307EA583"
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::ImportValue": "EvmPipelineStorage:ExportsOutputFnGetAttRawDataBucket57F26C03Arn307EA583"
+           },
+           "/*"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "Action": [
+        "s3:GetObject*",
+        "s3:GetBucket*",
+        "s3:List*",
+        "s3:DeleteObject*",
+        "s3:PutObject",
+        "s3:PutObjectLegalHold",
+        "s3:PutObjectRetention",
+        "s3:PutObjectTagging",
+        "s3:PutObjectVersionTagging",
+        "s3:Abort*"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::ImportValue": "EvmPipelineStorage:ExportsOutputFnGetAttDecodedDataBucketBEE63E2FArn22E93AAF"
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::ImportValue": "EvmPipelineStorage:ExportsOutputFnGetAttDecodedDataBucketBEE63E2FArn22E93AAF"
+           },
+           "/*"
+          ]
+         ]
+        }
+       ]
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "DecodeDataFnServiceRoleDefaultPolicy3A4578CB",
+    "Roles": [
+     {
+      "Ref": "DecodeDataFnServiceRole99E9A8AF"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "EvmPipelineLambda/DecodeDataFn/ServiceRole/DefaultPolicy/Resource"
+   }
+  },
+  "DecodeDataFnBAF65CC4": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Architectures": [
+     "x86_64"
+    ],
+    "Code": {
+     "ImageUri": {
+      "Fn::Sub": "000000000000.dkr.ecr.us-east-1.${AWS::URLSuffix}/cdk-hnb659fds-container-assets-000000000000-us-east-1:b2d7ac2c2680b1bb2dd793ac1e14e280282f28344b96a713204f2eb56449e1d9"
+     }
+    },
+    "Description": "Decodes raw event logs using contract ABIs",
+    "Environment": {
+     "Variables": {
+      "DYNAMODB_TABLE": {
+       "Fn::ImportValue": "EvmPipelineStorage:ExportsOutputRefContractsTable778EA487A860DA49"
+      },
+      "RAW_DATA_BUCKET": {
+       "Fn::ImportValue": "EvmPipelineStorage:ExportsOutputRefRawDataBucket57F26C0354920F72"
+      },
+      "DECODED_DATA_BUCKET": {
+       "Fn::ImportValue": "EvmPipelineStorage:ExportsOutputRefDecodedDataBucketBEE63E2FE5849F3A"
+      },
+      "ABI_BUCKET": {
+       "Fn::ImportValue": "EvmPipelineStorage:ExportsOutputRefAbiBucketB2EAE2C5CBF3ACAC"
+      }
+     }
+    },
+    "FunctionName": "evm-pipeline-decode-data",
+    "MemorySize": 2048,
+    "PackageType": "Image",
+    "Role": {
+     "Fn::GetAtt": [
+      "DecodeDataFnServiceRole99E9A8AF",
+      "Arn"
+     ]
+    },
+    "Tags": [
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Project",
+      "Value": "evm-pipeline"
+     }
+    ],
+    "Timeout": 600
+   },
+   "DependsOn": [
+    "DecodeDataFnServiceRoleDefaultPolicy3A4578CB",
+    "DecodeDataFnServiceRole99E9A8AF"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "EvmPipelineLambda/DecodeDataFn/Resource",
+    "aws:asset:path": "asset.b2d7ac2c2680b1bb2dd793ac1e14e280282f28344b96a713204f2eb56449e1d9",
+    "aws:asset:dockerfile-path": "decode_data/Dockerfile",
+    "aws:asset:property": "Code.ImageUri"
+   }
+  },
+  "CDKMetadata": {
+   "Type": "AWS::CDK::Metadata",
+   "Properties": {
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/02OzQrCMBCEn6X3dBULgkd/EDxZ4gOUNF3r2jQp+UFKybvbtAieZubbYdgd7IoCtpn4uFw2Xa6ohunhhezYjKpJib5uBEwXIzu0t160eA1aejKanZ/65yMj0cPEjcKEFy2NIjmmuLrIUNpKOIfewd/eMZF0A46DceSNHU/CYWQcnQlWIlsq81ct6TYN3oMfgo+sHP3L6E0BB9hnb0eU26A99Qh81S+IRkIl3wAAAA=="
+   },
+   "Metadata": {
+    "aws:cdk:path": "EvmPipelineLambda/CDKMetadata/Default"
+   }
+  }
+ },
+ "Outputs": {
+  "FetchLatestBlockFnArn": {
+   "Description": "ARN of the Fetch Latest Block Lambda",
+   "Value": {
+    "Fn::GetAtt": [
+     "FetchLatestBlockFn0EDA8928",
+     "Arn"
+    ]
+   }
+  },
+  "SyncRawDataFnArn": {
+   "Description": "ARN of the Sync Raw Data Lambda",
+   "Value": {
+    "Fn::GetAtt": [
+     "SyncRawDataFnB9930B66",
+     "Arn"
+    ]
+   }
+  },
+  "DecodeDataFnArn": {
+   "Description": "ARN of the Decode Data Lambda",
+   "Value": {
+    "Fn::GetAtt": [
+     "DecodeDataFnBAF65CC4",
+     "Arn"
+    ]
+   }
+  },
+  "ExportsOutputFnGetAttFetchLatestBlockFn0EDA8928Arn653320A5": {
+   "Value": {
+    "Fn::GetAtt": [
+     "FetchLatestBlockFn0EDA8928",
+     "Arn"
+    ]
+   },
+   "Export": {
+    "Name": "EvmPipelineLambda:ExportsOutputFnGetAttFetchLatestBlockFn0EDA8928Arn653320A5"
+   }
+  },
+  "ExportsOutputFnGetAttDecodeDataFnBAF65CC4Arn3E76EC9F": {
+   "Value": {
+    "Fn::GetAtt": [
+     "DecodeDataFnBAF65CC4",
+     "Arn"
+    ]
+   },
+   "Export": {
+    "Name": "EvmPipelineLambda:ExportsOutputFnGetAttDecodeDataFnBAF65CC4Arn3E76EC9F"
+   }
+  },
+  "ExportsOutputFnGetAttSyncRawDataFnB9930B66Arn9B2ECEBA": {
+   "Value": {
+    "Fn::GetAtt": [
+     "SyncRawDataFnB9930B66",
+     "Arn"
+    ]
+   },
+   "Export": {
+    "Name": "EvmPipelineLambda:ExportsOutputFnGetAttSyncRawDataFnB9930B66Arn9B2ECEBA"
+   }
+  }
+ },
+ "Parameters": {
+  "BootstrapVersion": {
+   "Type": "AWS::SSM::Parameter::Value<String>",
+   "Default": "/cdk-bootstrap/hnb659fds/version",
+   "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]"
+  }
+ },
+ "Rules": {
+  "CheckBootstrapVersion": {
+   "Assertions": [
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Contains": [
+         [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+         ],
+         {
+          "Ref": "BootstrapVersion"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI."
+    }
+   ]
+  }
+ }
+}

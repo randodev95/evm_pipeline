@@ -1,0 +1,21 @@
+{
+  "version": "48.0.0",
+  "files": {
+    "26b6ad4ee8b331fa285dc1be56f7c16f86d39bb1122ee1d62df283788d462445": {
+      "displayName": "EvmPipelineOrchestration Template",
+      "source": {
+        "path": "EvmPipelineOrchestration.template.json",
+        "packaging": "file"
+      },
+      "destinations": {
+        "000000000000-us-east-1-a9ea60a0": {
+          "bucketName": "cdk-hnb659fds-assets-000000000000-us-east-1",
+          "objectKey": "26b6ad4ee8b331fa285dc1be56f7c16f86d39bb1122ee1d62df283788d462445.json",
+          "region": "us-east-1",
+          "assumeRoleArn": "arn:${AWS::Partition}:iam::000000000000:role/cdk-hnb659fds-file-publishing-role-000000000000-us-east-1"
+        }
+      }
+    }
+  },
+  "dockerImages": {}
+}
